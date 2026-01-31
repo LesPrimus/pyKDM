@@ -52,6 +52,27 @@ class KDMGenerator:
                 )
             self.bin_path = Path(found)
 
+    @staticmethod
+    def _exec(cmd, *, error_prefix: str = "Command") -> subprocess.CompletedProcess:
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+        except OSError as e:
+            raise KDMGenerationError(f"{error_prefix} failed: {e}")
+        if result.returncode != 0:
+            raise KDMGenerationError(
+                f"{error_prefix} failed (exit code {result.returncode}):\n{result.stderr}"
+            )
+        return result
+
+    def _run(self, cmd, output_path: Path, *, error_prefix: str = "KDM generation"):
+        result = self._exec(cmd, error_prefix=error_prefix)
+        return KDMResult(
+            output_path=output_path,
+            success=True,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )
+
     def generate(
         self,
         dcp: Path,
@@ -112,28 +133,7 @@ class KDMGenerator:
 
         cmd.append(str(dcp))
 
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-            )
-        except OSError as e:
-            raise KDMGenerationError(f"Failed to run dcpomatic2_kdm_cli: {e}")
-
-        success = result.returncode == 0
-
-        if not success:
-            raise KDMGenerationError(
-                f"KDM generation failed (exit code {result.returncode}):\n{result.stderr}"
-            )
-
-        return KDMResult(
-            output_path=output,
-            success=success,
-            stdout=result.stdout,
-            stderr=result.stderr,
-        )
+        return self._run(cmd, output_path=output)
 
     def generate_for_dkdm(
         self,
@@ -185,28 +185,7 @@ class KDMGenerator:
             str(dkdm),
         ]
 
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-            )
-        except OSError as e:
-            raise KDMGenerationError(f"Failed to run dcpomatic2_kdm_cli: {e}")
-
-        success = result.returncode == 0
-
-        if not success:
-            raise KDMGenerationError(
-                f"KDM generation failed (exit code {result.returncode}):\n{result.stderr}"
-            )
-
-        return KDMResult(
-            output_path=output,
-            success=success,
-            stdout=result.stdout,
-            stderr=result.stderr,
-        )
+        return self._run(cmd, output_path=output)
 
     def create_dkdm(
         self,
@@ -263,34 +242,9 @@ class KDMGenerator:
             str(project),
         ]
 
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-            )
-        except OSError as e:
-            raise KDMGenerationError(f"Failed to run dcpomatic2_kdm_cli: {e}")
-
-        success = result.returncode == 0
-
-        if not success:
-            raise KDMGenerationError(
-                f"DKDM creation failed (exit code {result.returncode}):\n{result.stderr}"
-            )
-
-        return KDMResult(
-            output_path=output,
-            success=success,
-            stdout=result.stdout,
-            stderr=result.stderr,
-        )
+        return self._run(cmd, output_path=output, error_prefix="DKDM creation")
 
     def version(self) -> str:
         """Get dcpomatic2_kdm_cli version."""
-        result = subprocess.run(
-            [str(self.bin_path), "--version"],
-            capture_output=True,
-            text=True,
-        )
+        result = self._exec([str(self.bin_path), "--version"], error_prefix="Version check")
         return result.stdout.strip()
