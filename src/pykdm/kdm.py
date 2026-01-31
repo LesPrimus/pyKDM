@@ -245,6 +245,11 @@ class KDMGenerator:
         return self._run(cmd, output_path=output, error_prefix="DKDM creation")
 
     def version(self) -> str:
-        """Get dcpomatic2_kdm_cli version."""
-        result = self._exec([str(self.bin_path), "--version"], error_prefix="Version check")
+        """Get DCP-o-matic version (via dcpomatic2_cli, as dcpomatic2_kdm_cli lacks --version)."""
+        cli_path = shutil.which("dcpomatic2_cli")
+        if not cli_path:
+            raise KDMGenerationError(
+                "dcpomatic2_cli not found in PATH. Cannot determine version."
+            )
+        result = self._exec([cli_path, "--version"], error_prefix="Version check")
         return result.stdout.strip()
