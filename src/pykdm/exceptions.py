@@ -14,3 +14,9 @@ class KDMGenerationError(PyKDMError):
     """Raised when KDM generation fails."""
 
     pass
+
+
+class DCPProjectCreationError(PyKDMError):
+    """Raised when DCP project creation fails."""
+
+    pass

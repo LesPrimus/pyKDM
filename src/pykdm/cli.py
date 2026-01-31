@@ -4,7 +4,15 @@ from pathlib import Path
 
 from .dcp import DCPCreator
 from .kdm import KDMGenerator, KDMType
-from .exceptions import DCPCreationError, KDMGenerationError
+from .project import (
+    DCPProjectCreator,
+    DCPContentType,
+    ContainerRatio,
+    DCPStandard,
+    Resolution,
+    Dimension,
+)
+from .exceptions import DCPCreationError, KDMGenerationError, DCPProjectCreationError
 
 
 def parse_datetime(value: str) -> datetime:
@@ -75,6 +83,119 @@ def dcp_version(bin_path: Path | None):
         creator = DCPCreator(dcpomatic_path=str(bin_path) if bin_path else None)
         click.echo(creator.version())
     except DCPCreationError as e:
+        raise click.ClickException(str(e))
+
+
+@dcp.command("create-from-video")
+@click.argument("content", nargs=-1, required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("-o", "--output", required=True, type=click.Path(path_type=Path), help="Output directory for the project.")
+@click.option("-n", "--name", help="Film name.")
+@click.option("-e", "--encrypt", is_flag=True, help="Create encrypted DCP.")
+@click.option(
+    "-c",
+    "--content-type",
+    type=click.Choice([t.value for t in DCPContentType], case_sensitive=False),
+    help="DCP content type.",
+)
+@click.option(
+    "--container-ratio",
+    type=click.Choice([r.value for r in ContainerRatio], case_sensitive=False),
+    help="Container aspect ratio.",
+)
+@click.option("--twok/--fourk", "resolution", default=True, flag_value=True, help="Resolution (default: 2K).")
+@click.option(
+    "--standard",
+    type=click.Choice([s.value for s in DCPStandard], case_sensitive=False),
+    help="DCP standard (smpte or interop).",
+)
+@click.option("--build", is_flag=True, help="Also build the DCP after creating project.")
+@click.option("--dcp-output", type=click.Path(path_type=Path), help="Output directory for built DCP (with --build).")
+@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_create binary.")
+@click.option("--cli-bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_cli binary (for --build).")
+def dcp_create_from_video(
+    content: tuple[Path, ...],
+    output: Path,
+    name: str | None,
+    encrypt: bool,
+    content_type: str | None,
+    container_ratio: str | None,
+    resolution: bool,
+    standard: str | None,
+    build: bool,
+    dcp_output: Path | None,
+    bin_path: Path | None,
+    cli_bin_path: Path | None,
+):
+    """Create a DCP-o-matic project from video/audio files.
+
+    CONTENT is one or more paths to video or audio files.
+
+    \b
+    Examples:
+      pykdm dcp create-from-video video.mp4 -o ./my-project -n "My Film"
+      pykdm dcp create-from-video video.mp4 audio.wav -o ./project --build
+      pykdm dcp create-from-video video.mp4 -o ./project -e --build --dcp-output ./dcp
+    """
+    try:
+        creator = DCPProjectCreator(dcpomatic_create_path=str(bin_path) if bin_path else None)
+
+        # Convert option strings to enums
+        content_type_enum = DCPContentType(content_type) if content_type else None
+        container_ratio_enum = ContainerRatio(container_ratio) if container_ratio else None
+        standard_enum = DCPStandard(standard) if standard else None
+        resolution_enum = Resolution.TWO_K if resolution else Resolution.FOUR_K
+
+        content_paths = list(content)
+
+        if build:
+            click.echo(f"Creating project and building DCP from {len(content_paths)} file(s)...")
+            project_result, dcp_result = creator.create_and_build(
+                content=content_paths,
+                output=output,
+                dcp_output=dcp_output,
+                name=name,
+                encrypt=encrypt,
+                content_type=content_type_enum,
+                container_ratio=container_ratio_enum,
+                standard=standard_enum,
+                resolution=resolution_enum,
+                dcpomatic_cli_path=str(cli_bin_path) if cli_bin_path else None,
+            )
+            click.echo(f"Project created at: {project_result.output_path}")
+            click.echo(f"DCP created at: {dcp_result.output_path}")
+            if project_result.stdout:
+                click.echo(project_result.stdout)
+            if dcp_result.stdout:
+                click.echo(dcp_result.stdout)
+        else:
+            click.echo(f"Creating project from {len(content_paths)} file(s)...")
+            result = creator.create(
+                content=content_paths,
+                output=output,
+                name=name,
+                encrypt=encrypt,
+                content_type=content_type_enum,
+                container_ratio=container_ratio_enum,
+                standard=standard_enum,
+                resolution=resolution_enum,
+            )
+            click.echo(f"Project created successfully at: {result.output_path}")
+            if result.stdout:
+                click.echo(result.stdout)
+    except DCPProjectCreationError as e:
+        raise click.ClickException(str(e))
+    except DCPCreationError as e:
+        raise click.ClickException(str(e))
+
+
+@dcp.command("project-version")
+@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_create binary.")
+def dcp_project_version(bin_path: Path | None):
+    """Show dcpomatic2_create version."""
+    try:
+        creator = DCPProjectCreator(dcpomatic_create_path=str(bin_path) if bin_path else None)
+        click.echo(creator.version())
+    except DCPProjectCreationError as e:
         raise click.ClickException(str(e))
 
 
