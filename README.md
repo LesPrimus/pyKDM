@@ -91,6 +91,32 @@ Specify content type and resolution:
 pykdm dcp create-from-video video.mp4 -o ./project -c TLR --fourk --standard smpte
 ```
 
+### Test Certificate Generation
+
+Generate a test projector certificate for KDM testing:
+
+```bash
+pykdm cert generate test_projector.pem
+```
+
+Generate with custom device info:
+
+```bash
+pykdm cert generate projector.pem -m Barco -M DP2K -s ABC123
+```
+
+Generate with different DCI role:
+
+```bash
+pykdm cert generate cert.pem --role LINK_DECRYPTOR
+```
+
+Generate a CA + leaf certificate chain:
+
+```bash
+pykdm cert generate-chain ./test-certs -m Christie -M CP4230 -s XYZ789
+```
+
 ### Version Info
 
 ```bash
@@ -187,6 +213,48 @@ print(f"Project created at: {project_result.output_path}")
 print(f"DCP created at: {dcp_result.output_path}")
 ```
 
+### Test Certificate Generation
+
+```python
+from pathlib import Path
+from pykdm import CertificateGenerator, DCIRole
+
+generator = CertificateGenerator()
+
+# Generate a single test certificate
+result = generator.generate(
+    output=Path("projector.pem"),
+    manufacturer="Barco",
+    model="DP2K",
+    serial="ABC123",
+    role=DCIRole.PROJECTOR,
+    validity_days=3650,
+)
+
+print(f"Certificate: {result.certificate_path}")
+print(f"Private key: {result.private_key_path}")
+print(f"Thumbprint: {result.thumbprint}")
+```
+
+Generate a CA + leaf certificate chain:
+
+```python
+from pathlib import Path
+from pykdm import CertificateGenerator
+
+generator = CertificateGenerator()
+
+ca_result, leaf_result = generator.generate_chain(
+    output_dir=Path("./test-certs"),
+    manufacturer="Christie",
+    model="CP4230",
+    serial="XYZ789",
+)
+
+print(f"CA certificate: {ca_result.certificate_path}")
+print(f"Leaf certificate: {leaf_result.certificate_path}")
+```
+
 ## KDM Types
 
 - `modified-transitional-1` (default) - Most compatible format
@@ -221,6 +289,18 @@ print(f"DCP created at: {dcp_result.output_path}")
 
 - `smpte` - SMPTE standard (recommended)
 - `interop` - Interop standard (legacy)
+
+## DCI Certificate Roles
+
+For test certificate generation:
+
+- `PROJECTOR` - Media Decryptor (LE.SPB-MD) - default
+- `LINK_DECRYPTOR` - Link Decryptor (LE.SPB-LD)
+- `SECURE_PROCESSOR` - Secure Processor (LE.SPB-SP)
+- `CS` - Content Signer
+- `SMPTE` - SMPTE role
+
+Note: Test certificates are self-signed and won't work with real DCI infrastructure.
 
 ## License
 
