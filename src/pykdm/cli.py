@@ -207,7 +207,7 @@ def kdm():
 
 
 @kdm.command("generate")
-@click.argument("dcp", type=click.Path(exists=True, path_type=Path))
+@click.argument("project", type=click.Path(exists=True, path_type=Path))
 @click.option("-c", "--certificate", type=click.Path(exists=True, path_type=Path), required=True, help="Path to the target certificate (.pem).")
 @click.option("-o", "--output", type=click.Path(path_type=Path), required=True, help="Output path for the KDM file.")
 @click.option("-f", "--valid-from", type=DATETIME, required=True, help="Start of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
@@ -223,7 +223,7 @@ def kdm():
 @click.option("--screen-name", help="Screen name for the KDM.")
 @click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_kdm_cli binary.")
 def kdm_generate(
-    dcp: Path,
+    project: Path,
     certificate: Path,
     output: Path,
     valid_from: datetime,
@@ -235,16 +235,17 @@ def kdm_generate(
 ):
     """Generate a KDM for an encrypted DCP.
 
-    DCP is the path to the encrypted DCP directory.
+    PROJECT is the path to the DCP-o-matic project folder (the folder
+    containing metadata.xml), not the DCP output subfolder.
     """
     try:
         generator = KDMGenerator(dcpomatic_kdm_path=str(bin_path) if bin_path else None)
 
         kdm_type_enum = KDMType(kdm_type)
 
-        click.echo(f"Generating KDM for {dcp}...")
+        click.echo(f"Generating KDM for {project}...")
         result = generator.generate(
-            dcp=dcp,
+            project=project,
             certificate=certificate,
             output=output,
             valid_from=valid_from,

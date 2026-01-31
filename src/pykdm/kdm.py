@@ -75,7 +75,7 @@ class KDMGenerator:
 
     def generate(
         self,
-        dcp: Path,
+        project: Path,
         certificate: Path,
         output: Path,
         valid_from: datetime,
@@ -85,10 +85,12 @@ class KDMGenerator:
         screen_name: str | None = None,
     ) -> KDMResult:
         """
-        Generate a KDM for a DCP.
+        Generate a KDM for an encrypted DCP.
 
         Args:
-            dcp: Path to the encrypted DCP.
+            project: Path to the DCP-o-matic project folder (the project
+                    used to create the encrypted DCP, not the DCP output
+                    folder itself). The project folder contains metadata.xml.
             certificate: Path to the target certificate (.pem).
             output: Output path for the KDM file.
             valid_from: Start of validity period.
@@ -103,8 +105,8 @@ class KDMGenerator:
         Raises:
             KDMGenerationError: If KDM generation fails.
         """
-        if not dcp.exists():
-            raise KDMGenerationError(f"DCP not found: {dcp}")
+        if not project.exists():
+            raise KDMGenerationError(f"Project not found: {project}")
 
         if not certificate.exists():
             raise KDMGenerationError(f"Certificate not found: {certificate}")
@@ -131,7 +133,7 @@ class KDMGenerator:
         if screen_name:
             cmd.extend(["-s", screen_name])
 
-        cmd.append(str(dcp))
+        cmd.append(str(project))
 
         return self._run(cmd, output_path=output)
 

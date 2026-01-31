@@ -26,7 +26,7 @@ pip install pykdm
 Generate a KDM for an encrypted DCP:
 
 ```bash
-pykdm kdm generate /path/to/dcp \
+pykdm kdm generate /path/to/dcpomatic-project \
   -c /path/to/certificate.pem \
   -o /path/to/output.kdm.xml \
   -f "2024-01-01" \
@@ -34,6 +34,9 @@ pykdm kdm generate /path/to/dcp \
   --cinema-name "My Cinema" \
   --screen-name "Screen 1"
 ```
+
+Note: The path should be the DCP-o-matic project folder (containing `metadata.xml`),
+not the DCP output subfolder.
 
 Generate a KDM from a DKDM:
 
@@ -140,8 +143,10 @@ from pykdm import KDMGenerator, KDMType
 
 generator = KDMGenerator()
 
+# Note: project should be the DCP-o-matic project folder (containing metadata.xml),
+# not the DCP output subfolder
 result = generator.generate(
-    dcp=Path("/path/to/encrypted_dcp"),
+    project=Path("/path/to/dcpomatic-project"),
     certificate=Path("/path/to/certificate.pem"),
     output=Path("/path/to/output.kdm.xml"),
     valid_from=datetime.now(),
