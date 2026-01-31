@@ -208,6 +208,84 @@ class KDMGenerator:
             stderr=result.stderr,
         )
 
+    def create_dkdm(
+        self,
+        project: Path,
+        certificate: Path,
+        output: Path,
+        valid_from: datetime,
+        valid_to: datetime,
+        kdm_type: KDMType = KDMType.MODIFIED_TRANSITIONAL_1,
+    ) -> KDMResult:
+        """
+        Create a DKDM (Distribution KDM) from a DCP-o-matic project.
+
+        A DKDM is a KDM targeted at your own certificate, allowing you to
+        later generate KDMs for other recipients without needing the original
+        project.
+
+        Args:
+            project: Path to the DCP-o-matic project folder (the project
+                    used to create the encrypted DCP).
+            certificate: Path to your own certificate (.pem) - the certificate
+                        associated with your decryption key.
+            output: Output path for the DKDM file.
+            valid_from: Start of validity period.
+            valid_to: End of validity period.
+            kdm_type: Type of KDM to generate.
+
+        Returns:
+            KDMResult with output path and status.
+
+        Raises:
+            KDMGenerationError: If DKDM creation fails.
+        """
+        if not project.exists():
+            raise KDMGenerationError(f"Project not found: {project}")
+
+        if not certificate.exists():
+            raise KDMGenerationError(f"Certificate not found: {certificate}")
+
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        cmd = [
+            str(self.bin_path),
+            "-o",
+            str(output),
+            "-F",
+            kdm_type.value,
+            "-C",
+            str(certificate),
+            "-f",
+            valid_from.strftime("%Y-%m-%d %H:%M"),
+            "-t",
+            valid_to.strftime("%Y-%m-%d %H:%M"),
+            str(project),
+        ]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+            )
+        except OSError as e:
+            raise KDMGenerationError(f"Failed to run dcpomatic2_kdm_cli: {e}")
+
+        success = result.returncode == 0
+
+        if not success:
+            raise KDMGenerationError(
+                f"DKDM creation failed (exit code {result.returncode}):\n{result.stderr}"
+            )
+
+        return KDMResult(
+            output_path=output,
+            success=success,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )
+
     def version(self) -> str:
         """Get dcpomatic2_kdm_cli version."""
         result = subprocess.run(

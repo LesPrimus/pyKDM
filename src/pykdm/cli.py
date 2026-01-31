@@ -309,6 +309,64 @@ def kdm_generate_dkdm(
         raise click.ClickException(str(e))
 
 
+@kdm.command("create-dkdm")
+@click.argument("project", type=click.Path(exists=True, path_type=Path))
+@click.option("-c", "--certificate", type=click.Path(exists=True, path_type=Path), required=True, help="Path to your own certificate (.pem).")
+@click.option("-o", "--output", type=click.Path(path_type=Path), required=True, help="Output path for the DKDM file.")
+@click.option("-f", "--valid-from", type=DATETIME, required=True, help="Start of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
+@click.option("-t", "--valid-to", type=DATETIME, required=True, help="End of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
+@click.option(
+    "-F",
+    "--kdm-type",
+    type=click.Choice([t.value for t in KDMType], case_sensitive=False),
+    default=KDMType.MODIFIED_TRANSITIONAL_1.value,
+    help="KDM output format type.",
+)
+@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_kdm_cli binary.")
+def kdm_create_dkdm(
+    project: Path,
+    certificate: Path,
+    output: Path,
+    valid_from: datetime,
+    valid_to: datetime,
+    kdm_type: str,
+    bin_path: Path | None,
+):
+    """Create a DKDM (Distribution KDM) from a DCP-o-matic project.
+
+    A DKDM is a KDM targeted at your own certificate, allowing you to
+    later generate KDMs for other recipients without needing the original
+    project.
+
+    PROJECT is the path to the DCP-o-matic project folder (the project
+    used to create the encrypted DCP).
+
+    \b
+    Examples:
+      pykdm kdm create-dkdm ./my-project -c my_cert.pem -o my_film.dkdm.xml -f 2025-01-01 -t 2030-01-01
+    """
+    try:
+        generator = KDMGenerator(dcpomatic_kdm_path=str(bin_path) if bin_path else None)
+
+        kdm_type_enum = KDMType(kdm_type)
+
+        click.echo(f"Creating DKDM from project {project}...")
+        result = generator.create_dkdm(
+            project=project,
+            certificate=certificate,
+            output=output,
+            valid_from=valid_from,
+            valid_to=valid_to,
+            kdm_type=kdm_type_enum,
+        )
+
+        click.echo(f"DKDM created successfully at: {result.output_path}")
+        if result.stdout:
+            click.echo(result.stdout)
+    except KDMGenerationError as e:
+        raise click.ClickException(str(e))
+
+
 @kdm.command("version")
 @click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_kdm_cli binary.")
 def kdm_version(bin_path: Path | None):
