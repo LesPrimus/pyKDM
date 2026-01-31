@@ -12,7 +12,14 @@ from .project import (
     AudioChannel,
     Eye,
 )
-from .exceptions import PyKDMError, DCPCreationError, KDMGenerationError, DCPProjectCreationError
+from .certificate import CertificateGenerator, CertificateResult, DCIRole
+from .exceptions import (
+    PyKDMError,
+    DCPCreationError,
+    KDMGenerationError,
+    DCPProjectCreationError,
+    CertificateGenerationError,
+)
 
 __all__ = [
     "DCPCreator",
@@ -32,4 +39,8 @@ __all__ = [
     "AudioChannel",
     "Eye",
     "DCPProjectCreationError",
+    "CertificateGenerator",
+    "CertificateResult",
+    "DCIRole",
+    "CertificateGenerationError",
 ]

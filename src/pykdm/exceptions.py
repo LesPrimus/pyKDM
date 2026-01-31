@@ -20,3 +20,9 @@ class DCPProjectCreationError(PyKDMError):
     """Raised when DCP project creation fails."""
 
     pass
+
+
+class CertificateGenerationError(PyKDMError):
+    """Raised when certificate generation fails."""
+
+    pass

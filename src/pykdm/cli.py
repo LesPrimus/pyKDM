@@ -12,7 +12,8 @@ from .project import (
     Resolution,
     Dimension,
 )
-from .exceptions import DCPCreationError, KDMGenerationError, DCPProjectCreationError
+from .certificate import CertificateGenerator, DCIRole
+from .exceptions import DCPCreationError, KDMGenerationError, DCPProjectCreationError, CertificateGenerationError
 
 
 def parse_datetime(value: str) -> datetime:
@@ -375,6 +376,132 @@ def kdm_version(bin_path: Path | None):
         generator = KDMGenerator(dcpomatic_kdm_path=str(bin_path) if bin_path else None)
         click.echo(generator.version())
     except KDMGenerationError as e:
+        raise click.ClickException(str(e))
+
+
+@cli.group()
+def cert():
+    """Certificate generation commands (for testing)."""
+    pass
+
+
+@cert.command("generate")
+@click.argument("output", type=click.Path(path_type=Path))
+@click.option("-m", "--manufacturer", default="TestManufacturer", help="Device manufacturer name.")
+@click.option("-M", "--model", default="TestProjector", help="Device model name.")
+@click.option("-s", "--serial", default="12345", help="Device serial number.")
+@click.option(
+    "-r",
+    "--role",
+    type=click.Choice([r.name for r in DCIRole], case_sensitive=False),
+    default=DCIRole.PROJECTOR.name,
+    help="DCI role for the certificate.",
+)
+@click.option("-o", "--organization", help="Organization name (defaults to manufacturer).")
+@click.option("-d", "--validity-days", default=3650, type=int, help="Validity period in days (default: 3650).")
+@click.option("--no-key", is_flag=True, help="Don't save the private key.")
+@click.option("--key-size", default=2048, type=int, help="RSA key size in bits (default: 2048).")
+def cert_generate(
+    output: Path,
+    manufacturer: str,
+    model: str,
+    serial: str,
+    role: str,
+    organization: str | None,
+    validity_days: int,
+    no_key: bool,
+    key_size: int,
+):
+    """Generate a test DCI-style projector certificate.
+
+    OUTPUT is the path for the certificate file (.pem).
+
+    This creates a self-signed certificate that mimics the structure of
+    DCI projector certificates. Useful for testing KDM generation workflows.
+
+    NOTE: These certificates are for testing only and won't work with
+    real DCI infrastructure (not signed by a trusted DCI CA).
+
+    \b
+    Examples:
+      pykdm cert generate test_projector.pem
+      pykdm cert generate projector.pem -m Barco -M DP2K -s ABC123
+      pykdm cert generate cert.pem --role LINK_DECRYPTOR --validity-days 365
+    """
+    try:
+        generator = CertificateGenerator(key_size=key_size)
+        role_enum = DCIRole[role]
+
+        click.echo(f"Generating test certificate...")
+        result = generator.generate(
+            output=output,
+            manufacturer=manufacturer,
+            model=model,
+            serial=serial,
+            role=role_enum,
+            organization=organization,
+            validity_days=validity_days,
+            save_private_key=not no_key,
+        )
+
+        click.echo(f"Certificate created: {result.certificate_path}")
+        if result.private_key_path:
+            click.echo(f"Private key created: {result.private_key_path}")
+        click.echo(f"Thumbprint: {result.thumbprint}")
+    except CertificateGenerationError as e:
+        raise click.ClickException(str(e))
+
+
+@cert.command("generate-chain")
+@click.argument("output_dir", type=click.Path(path_type=Path))
+@click.option("-m", "--manufacturer", default="TestManufacturer", help="Device manufacturer name.")
+@click.option("-M", "--model", default="TestProjector", help="Device model name.")
+@click.option("-s", "--serial", default="12345", help="Device serial number.")
+@click.option("-d", "--validity-days", default=3650, type=int, help="Validity period in days (default: 3650).")
+@click.option("--key-size", default=2048, type=int, help="RSA key size in bits (default: 2048).")
+def cert_generate_chain(
+    output_dir: Path,
+    manufacturer: str,
+    model: str,
+    serial: str,
+    validity_days: int,
+    key_size: int,
+):
+    """Generate a test CA + leaf certificate chain.
+
+    OUTPUT_DIR is the directory where certificates will be created.
+
+    This creates:
+      - ca.pem / ca.key.pem: Self-signed CA certificate
+      - leaf.pem / leaf.key.pem: Leaf certificate signed by the CA
+
+    Useful for testing more realistic certificate chain scenarios.
+
+    \b
+    Examples:
+      pykdm cert generate-chain ./test-certs
+      pykdm cert generate-chain ./certs -m Barco -M DP4K -s XYZ789
+    """
+    try:
+        generator = CertificateGenerator(key_size=key_size)
+
+        click.echo(f"Generating certificate chain...")
+        ca_result, leaf_result = generator.generate_chain(
+            output_dir=output_dir,
+            manufacturer=manufacturer,
+            model=model,
+            serial=serial,
+            validity_days=validity_days,
+        )
+
+        click.echo(f"CA certificate: {ca_result.certificate_path}")
+        click.echo(f"CA private key: {ca_result.private_key_path}")
+        click.echo(f"CA thumbprint: {ca_result.thumbprint}")
+        click.echo()
+        click.echo(f"Leaf certificate: {leaf_result.certificate_path}")
+        click.echo(f"Leaf private key: {leaf_result.private_key_path}")
+        click.echo(f"Leaf thumbprint: {leaf_result.thumbprint}")
+    except CertificateGenerationError as e:
         raise click.ClickException(str(e))
 
 
