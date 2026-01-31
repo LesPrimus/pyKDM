@@ -260,7 +260,7 @@ def kdm_generate(
         raise click.ClickException(str(e))
 
 
-@kdm.command("generate-dkdm")
+@kdm.command("generate-from-dkdm")
 @click.argument("dkdm", type=click.Path(exists=True, path_type=Path))
 @click.option("-c", "--certificate", type=click.Path(exists=True, path_type=Path), required=True, help="Path to the target certificate (.pem).")
 @click.option("-o", "--output", type=click.Path(path_type=Path), required=True, help="Output path for the KDM file.")
@@ -274,7 +274,7 @@ def kdm_generate(
     help="KDM output format type.",
 )
 @click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_kdm_cli binary.")
-def kdm_generate_dkdm(
+def kdm_generate_from_dkdm(
     dkdm: Path,
     certificate: Path,
     output: Path,
@@ -293,7 +293,7 @@ def kdm_generate_dkdm(
         kdm_type_enum = KDMType(kdm_type)
 
         click.echo(f"Generating KDM from DKDM {dkdm}...")
-        result = generator.generate_for_dkdm(
+        result = generator.generate_from_dkdm(
             dkdm=dkdm,
             certificate=certificate,
             output=output,

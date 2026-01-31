@@ -135,7 +135,7 @@ class KDMGenerator:
 
         return self._run(cmd, output_path=output)
 
-    def generate_for_dkdm(
+    def generate_from_dkdm(
         self,
         dkdm: Path,
         certificate: Path,
