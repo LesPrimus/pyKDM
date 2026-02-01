@@ -2,6 +2,8 @@
 name = "pykdm"
 version = "0.1.0"
 description = "Python wrapper for DCP-o-matic CLI tools (DCP creation and KDM generation)"
+license = "MIT"
+authors = [{name = "pykdm contributors"}]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
