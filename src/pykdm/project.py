@@ -214,7 +214,9 @@ class DCPProjectCreator:
         for item in content_list:
             if isinstance(item, ContentItem):
                 if not item.path.exists():
-                    raise DCPProjectCreationError(f"Content file not found: {item.path}")
+                    raise DCPProjectCreationError(
+                        f"Content file not found: {item.path}"
+                    )
 
                 # Add per-content options before the content path
                 if item.eye:

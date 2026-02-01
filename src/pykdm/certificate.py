@@ -44,7 +44,9 @@ class CertificateGenerator:
             key_size: RSA key size in bits (default 2048 for DCI compatibility).
         """
         if key_size < 2048:
-            raise CertificateGenerationError("Key size must be at least 2048 bits for DCI")
+            raise CertificateGenerationError(
+                "Key size must be at least 2048 bits for DCI"
+            )
         self.key_size = key_size
 
     def generate(
@@ -89,12 +91,14 @@ class CertificateGenerator:
             org = organization or manufacturer
 
             # Build certificate subject/issuer (self-signed)
-            subject = issuer = x509.Name([
-                x509.NameAttribute(NameOID.ORGANIZATION_NAME, org),
-                x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, model),
-                x509.NameAttribute(NameOID.COMMON_NAME, cn),
-                x509.NameAttribute(NameOID.DN_QUALIFIER, serial),
-            ])
+            subject = issuer = x509.Name(
+                [
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, org),
+                    x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, model),
+                    x509.NameAttribute(NameOID.COMMON_NAME, cn),
+                    x509.NameAttribute(NameOID.DN_QUALIFIER, serial),
+                ]
+            )
 
             now = datetime.now(timezone.utc)
             cert = (
@@ -157,7 +161,9 @@ class CertificateGenerator:
             )
 
         except Exception as e:
-            raise CertificateGenerationError(f"Failed to generate certificate: {e}") from e
+            raise CertificateGenerationError(
+                f"Failed to generate certificate: {e}"
+            ) from e
 
     def generate_chain(
         self,
@@ -197,10 +203,12 @@ class CertificateGenerator:
             )
 
             ca_cn = f"DC.{manufacturer}.TestCA"
-            ca_subject = ca_issuer = x509.Name([
-                x509.NameAttribute(NameOID.ORGANIZATION_NAME, manufacturer),
-                x509.NameAttribute(NameOID.COMMON_NAME, ca_cn),
-            ])
+            ca_subject = ca_issuer = x509.Name(
+                [
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, manufacturer),
+                    x509.NameAttribute(NameOID.COMMON_NAME, ca_cn),
+                ]
+            )
 
             now = datetime.now(timezone.utc)
             ca_cert = (
@@ -259,12 +267,14 @@ class CertificateGenerator:
             )
 
             leaf_cn = f"{DCIRole.PROJECTOR.value}.{manufacturer}.{model}.{serial}"
-            leaf_subject = x509.Name([
-                x509.NameAttribute(NameOID.ORGANIZATION_NAME, manufacturer),
-                x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, model),
-                x509.NameAttribute(NameOID.COMMON_NAME, leaf_cn),
-                x509.NameAttribute(NameOID.DN_QUALIFIER, serial),
-            ])
+            leaf_subject = x509.Name(
+                [
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, manufacturer),
+                    x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, model),
+                    x509.NameAttribute(NameOID.COMMON_NAME, leaf_cn),
+                    x509.NameAttribute(NameOID.DN_QUALIFIER, serial),
+                ]
+            )
 
             leaf_cert = (
                 x509.CertificateBuilder()
@@ -318,4 +328,6 @@ class CertificateGenerator:
             return ca_result, leaf_result
 
         except Exception as e:
-            raise CertificateGenerationError(f"Failed to generate certificate chain: {e}") from e
+            raise CertificateGenerationError(
+                f"Failed to generate certificate chain: {e}"
+            ) from e

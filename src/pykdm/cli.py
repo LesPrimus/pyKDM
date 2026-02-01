@@ -13,7 +13,12 @@ from .project import (
     Dimension,
 )
 from .certificate import CertificateGenerator, DCIRole
-from .exceptions import DCPCreationError, KDMGenerationError, DCPProjectCreationError, CertificateGenerationError
+from .exceptions import (
+    DCPCreationError,
+    KDMGenerationError,
+    DCPProjectCreationError,
+    CertificateGenerationError,
+)
 
 
 def parse_datetime(value: str) -> datetime:
@@ -23,7 +28,9 @@ def parse_datetime(value: str) -> datetime:
             return datetime.strptime(value, fmt)
         except ValueError:
             continue
-    raise click.BadParameter(f"Invalid datetime format: {value}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM")
+    raise click.BadParameter(
+        f"Invalid datetime format: {value}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM"
+    )
 
 
 class DateTimeType(click.ParamType):
@@ -55,10 +62,21 @@ def dcp():
 
 @dcp.command("create")
 @click.argument("project", type=click.Path(exists=True, path_type=Path))
-@click.option("-o", "--output", type=click.Path(path_type=Path), help="Output directory for the DCP.")
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path),
+    help="Output directory for the DCP.",
+)
 @click.option("-e", "--encrypt", is_flag=True, help="Encrypt the DCP.")
-@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_cli binary.")
-def dcp_create(project: Path, output: Path | None, encrypt: bool, bin_path: Path | None):
+@click.option(
+    "--bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_cli binary.",
+)
+def dcp_create(
+    project: Path, output: Path | None, encrypt: bool, bin_path: Path | None
+):
     """Create a DCP from a DCP-o-matic project.
 
     PROJECT is the path to a .dcp project file or project directory.
@@ -77,7 +95,11 @@ def dcp_create(project: Path, output: Path | None, encrypt: bool, bin_path: Path
 
 
 @dcp.command("version")
-@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_cli binary.")
+@click.option(
+    "--bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_cli binary.",
+)
 def dcp_version(bin_path: Path | None):
     """Show dcpomatic2_cli version."""
     try:
@@ -88,8 +110,16 @@ def dcp_version(bin_path: Path | None):
 
 
 @dcp.command("create-from-video")
-@click.argument("content", nargs=-1, required=True, type=click.Path(exists=True, path_type=Path))
-@click.option("-o", "--output", required=True, type=click.Path(path_type=Path), help="Output directory for the project.")
+@click.argument(
+    "content", nargs=-1, required=True, type=click.Path(exists=True, path_type=Path)
+)
+@click.option(
+    "-o",
+    "--output",
+    required=True,
+    type=click.Path(path_type=Path),
+    help="Output directory for the project.",
+)
 @click.option("-n", "--name", help="Film name.")
 @click.option("-e", "--encrypt", is_flag=True, help="Create encrypted DCP.")
 @click.option(
@@ -103,16 +133,36 @@ def dcp_version(bin_path: Path | None):
     type=click.Choice([r.value for r in ContainerRatio], case_sensitive=False),
     help="Container aspect ratio.",
 )
-@click.option("--twok/--fourk", "resolution", default=True, flag_value=True, help="Resolution (default: 2K).")
+@click.option(
+    "--twok/--fourk",
+    "resolution",
+    default=True,
+    flag_value=True,
+    help="Resolution (default: 2K).",
+)
 @click.option(
     "--standard",
     type=click.Choice([s.value for s in DCPStandard], case_sensitive=False),
     help="DCP standard (smpte or interop).",
 )
-@click.option("--build", is_flag=True, help="Also build the DCP after creating project.")
-@click.option("--dcp-output", type=click.Path(path_type=Path), help="Output directory for built DCP (with --build).")
-@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_create binary.")
-@click.option("--cli-bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_cli binary (for --build).")
+@click.option(
+    "--build", is_flag=True, help="Also build the DCP after creating project."
+)
+@click.option(
+    "--dcp-output",
+    type=click.Path(path_type=Path),
+    help="Output directory for built DCP (with --build).",
+)
+@click.option(
+    "--bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_create binary.",
+)
+@click.option(
+    "--cli-bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_cli binary (for --build).",
+)
 def dcp_create_from_video(
     content: tuple[Path, ...],
     output: Path,
@@ -138,18 +188,24 @@ def dcp_create_from_video(
       pykdm dcp create-from-video video.mp4 -o ./project -e --build --dcp-output ./dcp
     """
     try:
-        creator = DCPProjectCreator(dcpomatic_create_path=str(bin_path) if bin_path else None)
+        creator = DCPProjectCreator(
+            dcpomatic_create_path=str(bin_path) if bin_path else None
+        )
 
         # Convert option strings to enums
         content_type_enum = DCPContentType(content_type) if content_type else None
-        container_ratio_enum = ContainerRatio(container_ratio) if container_ratio else None
+        container_ratio_enum = (
+            ContainerRatio(container_ratio) if container_ratio else None
+        )
         standard_enum = DCPStandard(standard) if standard else None
         resolution_enum = Resolution.TWO_K if resolution else Resolution.FOUR_K
 
         content_paths = list(content)
 
         if build:
-            click.echo(f"Creating project and building DCP from {len(content_paths)} file(s)...")
+            click.echo(
+                f"Creating project and building DCP from {len(content_paths)} file(s)..."
+            )
             project_result, dcp_result = creator.create_and_build(
                 content=content_paths,
                 output=output,
@@ -190,11 +246,17 @@ def dcp_create_from_video(
 
 
 @dcp.command("project-version")
-@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_create binary.")
+@click.option(
+    "--bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_create binary.",
+)
 def dcp_project_version(bin_path: Path | None):
     """Show dcpomatic2_create version."""
     try:
-        creator = DCPProjectCreator(dcpomatic_create_path=str(bin_path) if bin_path else None)
+        creator = DCPProjectCreator(
+            dcpomatic_create_path=str(bin_path) if bin_path else None
+        )
         click.echo(creator.version())
     except DCPProjectCreationError as e:
         raise click.ClickException(str(e))
@@ -208,10 +270,34 @@ def kdm():
 
 @kdm.command("generate")
 @click.argument("project", type=click.Path(exists=True, path_type=Path))
-@click.option("-c", "--certificate", type=click.Path(exists=True, path_type=Path), required=True, help="Path to the target certificate (.pem).")
-@click.option("-o", "--output", type=click.Path(path_type=Path), required=True, help="Output path for the KDM file.")
-@click.option("-f", "--valid-from", type=DATETIME, required=True, help="Start of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
-@click.option("-t", "--valid-to", type=DATETIME, required=True, help="End of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
+@click.option(
+    "-c",
+    "--certificate",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Path to the target certificate (.pem).",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Output path for the KDM file.",
+)
+@click.option(
+    "-f",
+    "--valid-from",
+    type=DATETIME,
+    required=True,
+    help="Start of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).",
+)
+@click.option(
+    "-t",
+    "--valid-to",
+    type=DATETIME,
+    required=True,
+    help="End of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).",
+)
 @click.option(
     "-K",
     "--kdm-type",
@@ -221,7 +307,11 @@ def kdm():
 )
 @click.option("--cinema-name", help="Cinema name for the KDM.")
 @click.option("--screen-name", help="Screen name for the KDM.")
-@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_kdm_cli binary.")
+@click.option(
+    "--bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_kdm_cli binary.",
+)
 def kdm_generate(
     project: Path,
     certificate: Path,
@@ -264,10 +354,34 @@ def kdm_generate(
 
 @kdm.command("generate-from-dkdm")
 @click.argument("dkdm", type=click.Path(exists=True, path_type=Path))
-@click.option("-c", "--certificate", type=click.Path(exists=True, path_type=Path), required=True, help="Path to the target certificate (.pem).")
-@click.option("-o", "--output", type=click.Path(path_type=Path), required=True, help="Output path for the KDM file.")
-@click.option("-f", "--valid-from", type=DATETIME, required=True, help="Start of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
-@click.option("-t", "--valid-to", type=DATETIME, required=True, help="End of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
+@click.option(
+    "-c",
+    "--certificate",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Path to the target certificate (.pem).",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Output path for the KDM file.",
+)
+@click.option(
+    "-f",
+    "--valid-from",
+    type=DATETIME,
+    required=True,
+    help="Start of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).",
+)
+@click.option(
+    "-t",
+    "--valid-to",
+    type=DATETIME,
+    required=True,
+    help="End of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).",
+)
 @click.option(
     "-K",
     "--kdm-type",
@@ -275,7 +389,11 @@ def kdm_generate(
     default=KDMType.MODIFIED_TRANSITIONAL_1.value,
     help="KDM output format type.",
 )
-@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_kdm_cli binary.")
+@click.option(
+    "--bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_kdm_cli binary.",
+)
 def kdm_generate_from_dkdm(
     dkdm: Path,
     certificate: Path,
@@ -313,10 +431,34 @@ def kdm_generate_from_dkdm(
 
 @kdm.command("create-dkdm")
 @click.argument("project", type=click.Path(exists=True, path_type=Path))
-@click.option("-c", "--certificate", type=click.Path(exists=True, path_type=Path), required=True, help="Path to your own certificate (.pem).")
-@click.option("-o", "--output", type=click.Path(path_type=Path), required=True, help="Output path for the DKDM file.")
-@click.option("-f", "--valid-from", type=DATETIME, required=True, help="Start of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
-@click.option("-t", "--valid-to", type=DATETIME, required=True, help="End of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).")
+@click.option(
+    "-c",
+    "--certificate",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Path to your own certificate (.pem).",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Output path for the DKDM file.",
+)
+@click.option(
+    "-f",
+    "--valid-from",
+    type=DATETIME,
+    required=True,
+    help="Start of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).",
+)
+@click.option(
+    "-t",
+    "--valid-to",
+    type=DATETIME,
+    required=True,
+    help="End of validity period (YYYY-MM-DD or YYYY-MM-DD HH:MM).",
+)
 @click.option(
     "-F",
     "--kdm-type",
@@ -324,7 +466,11 @@ def kdm_generate_from_dkdm(
     default=KDMType.MODIFIED_TRANSITIONAL_1.value,
     help="KDM output format type.",
 )
-@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_kdm_cli binary.")
+@click.option(
+    "--bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_kdm_cli binary.",
+)
 def kdm_create_dkdm(
     project: Path,
     certificate: Path,
@@ -370,7 +516,11 @@ def kdm_create_dkdm(
 
 
 @kdm.command("version")
-@click.option("--bin-path", type=click.Path(exists=True, path_type=Path), help="Path to dcpomatic2_kdm_cli binary.")
+@click.option(
+    "--bin-path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to dcpomatic2_kdm_cli binary.",
+)
 def kdm_version(bin_path: Path | None):
     """Show dcpomatic2_kdm_cli version."""
     try:
@@ -388,7 +538,9 @@ def cert():
 
 @cert.command("generate")
 @click.argument("output", type=click.Path(path_type=Path))
-@click.option("-m", "--manufacturer", default="TestManufacturer", help="Device manufacturer name.")
+@click.option(
+    "-m", "--manufacturer", default="TestManufacturer", help="Device manufacturer name."
+)
 @click.option("-M", "--model", default="TestProjector", help="Device model name.")
 @click.option("-s", "--serial", default="12345", help="Device serial number.")
 @click.option(
@@ -398,10 +550,20 @@ def cert():
     default=DCIRole.PROJECTOR.name,
     help="DCI role for the certificate.",
 )
-@click.option("-o", "--organization", help="Organization name (defaults to manufacturer).")
-@click.option("-d", "--validity-days", default=3650, type=int, help="Validity period in days (default: 3650).")
+@click.option(
+    "-o", "--organization", help="Organization name (defaults to manufacturer)."
+)
+@click.option(
+    "-d",
+    "--validity-days",
+    default=3650,
+    type=int,
+    help="Validity period in days (default: 3650).",
+)
 @click.option("--no-key", is_flag=True, help="Don't save the private key.")
-@click.option("--key-size", default=2048, type=int, help="RSA key size in bits (default: 2048).")
+@click.option(
+    "--key-size", default=2048, type=int, help="RSA key size in bits (default: 2048)."
+)
 def cert_generate(
     output: Path,
     manufacturer: str,
@@ -455,11 +617,21 @@ def cert_generate(
 
 @cert.command("generate-chain")
 @click.argument("output_dir", type=click.Path(path_type=Path))
-@click.option("-m", "--manufacturer", default="TestManufacturer", help="Device manufacturer name.")
+@click.option(
+    "-m", "--manufacturer", default="TestManufacturer", help="Device manufacturer name."
+)
 @click.option("-M", "--model", default="TestProjector", help="Device model name.")
 @click.option("-s", "--serial", default="12345", help="Device serial number.")
-@click.option("-d", "--validity-days", default=3650, type=int, help="Validity period in days (default: 3650).")
-@click.option("--key-size", default=2048, type=int, help="RSA key size in bits (default: 2048).")
+@click.option(
+    "-d",
+    "--validity-days",
+    default=3650,
+    type=int,
+    help="Validity period in days (default: 3650).",
+)
+@click.option(
+    "--key-size", default=2048, type=int, help="RSA key size in bits (default: 2048)."
+)
 def cert_generate_chain(
     output_dir: Path,
     manufacturer: str,
