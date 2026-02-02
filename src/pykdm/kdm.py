@@ -1,11 +1,10 @@
-import subprocess
-import shutil
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
 from .exceptions import KDMGenerationError
+from .runner import Runner, CLIResult
 
 
 class KDMType(Enum):
@@ -37,41 +36,7 @@ class KDMGenerator:
             dcpomatic_kdm_path: Path to dcpomatic2_kdm_cli binary.
                                If None, searches in PATH.
         """
-        if dcpomatic_kdm_path:
-            self.bin_path = Path(dcpomatic_kdm_path)
-            if not self.bin_path.exists():
-                raise KDMGenerationError(
-                    f"dcpomatic2_kdm_cli not found at {dcpomatic_kdm_path}"
-                )
-        else:
-            found = shutil.which("dcpomatic2_kdm_cli")
-            if not found:
-                raise KDMGenerationError(
-                    "dcpomatic2_kdm_cli not found in PATH. "
-                    "Install DCP-o-matic or provide explicit path."
-                )
-            self.bin_path = Path(found)
-
-    @staticmethod
-    def _exec(cmd, *, error_prefix: str = "Command") -> subprocess.CompletedProcess:
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-        except OSError as e:
-            raise KDMGenerationError(f"{error_prefix} failed: {e}")
-        if result.returncode != 0:
-            raise KDMGenerationError(
-                f"{error_prefix} failed (exit code {result.returncode}):\n{result.stderr}"
-            )
-        return result
-
-    def _run(self, cmd, output_path: Path, *, error_prefix: str = "KDM generation"):
-        result = self._exec(cmd, error_prefix=error_prefix)
-        return KDMResult(
-            output_path=output_path,
-            success=True,
-            stdout=result.stdout,
-            stderr=result.stderr,
-        )
+        self.runner = Runner("dcpomatic2_kdm_cli", dcpomatic_kdm_path)
 
     def generate(
         self,
@@ -83,7 +48,7 @@ class KDMGenerator:
         kdm_type: KDMType = KDMType.MODIFIED_TRANSITIONAL_1,
         cinema_name: str | None = None,
         screen_name: str | None = None,
-    ) -> KDMResult:
+    ) -> CLIResult:
         """
         Generate a KDM for an encrypted DCP.
 
@@ -105,16 +70,10 @@ class KDMGenerator:
         Raises:
             KDMGenerationError: If KDM generation fails.
         """
-        if not project.exists():
-            raise KDMGenerationError(f"Project not found: {project}")
-
-        if not certificate.exists():
-            raise KDMGenerationError(f"Certificate not found: {certificate}")
 
         output.parent.mkdir(parents=True, exist_ok=True)
 
         cmd = [
-            str(self.bin_path),
             "-o",
             str(output),
             "-K",
@@ -135,7 +94,7 @@ class KDMGenerator:
 
         cmd.append(str(project))
 
-        return self._run(cmd, output_path=output)
+        return self.runner.run(*cmd, output_path=output)
 
     def generate_from_dkdm(
         self,
@@ -145,7 +104,7 @@ class KDMGenerator:
         valid_from: datetime,
         valid_to: datetime,
         kdm_type: KDMType = KDMType.MODIFIED_TRANSITIONAL_1,
-    ) -> KDMResult:
+    ) -> CLIResult:
         """
         Generate a KDM from a DKDM (Distribution KDM).
 
@@ -158,10 +117,10 @@ class KDMGenerator:
             kdm_type: Type of KDM to generate.
 
         Returns:
-            KDMResult with output path and status.
+            CLIResult with output path and status.
 
         Raises:
-            KDMGenerationError: If KDM generation fails.
+            CLIError: If KDM generation fails.
         """
         if not dkdm.exists():
             raise KDMGenerationError(f"DKDM not found: {dkdm}")
@@ -172,7 +131,6 @@ class KDMGenerator:
         output.parent.mkdir(parents=True, exist_ok=True)
 
         cmd = [
-            str(self.bin_path),
             "-o",
             str(output),
             "-K",
@@ -187,7 +145,7 @@ class KDMGenerator:
             str(dkdm),
         ]
 
-        return self._run(cmd, output_path=output)
+        return self.runner.run(*cmd, output_path=output)
 
     def create_dkdm(
         self,
@@ -197,7 +155,7 @@ class KDMGenerator:
         valid_from: datetime,
         valid_to: datetime,
         kdm_type: KDMType = KDMType.MODIFIED_TRANSITIONAL_1,
-    ) -> KDMResult:
+    ) -> CLIResult:
         """
         Create a DKDM (Distribution KDM) from a DCP-o-matic project.
 
@@ -230,7 +188,6 @@ class KDMGenerator:
         output.parent.mkdir(parents=True, exist_ok=True)
 
         cmd = [
-            str(self.bin_path),
             "-o",
             str(output),
             "-F",
@@ -244,14 +201,4 @@ class KDMGenerator:
             str(project),
         ]
 
-        return self._run(cmd, output_path=output, error_prefix="DKDM creation")
-
-    def version(self) -> str:
-        """Get DCP-o-matic version (via dcpomatic2_cli, as dcpomatic2_kdm_cli lacks --version)."""
-        cli_path = shutil.which("dcpomatic2_cli")
-        if not cli_path:
-            raise KDMGenerationError(
-                "dcpomatic2_cli not found in PATH. Cannot determine version."
-            )
-        result = self._exec([cli_path, "--version"], error_prefix="Version check")
-        return result.stdout.strip()
+        return self.runner.run(*cmd, output_path=output, error_prefix="DKDM creation")
