@@ -1,10 +1,9 @@
-import subprocess
-import shutil
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable
 
 from .exceptions import DCPCreationError
+from .runner import Runner, CLIResult
 
 
 @dataclass
@@ -28,18 +27,7 @@ class DCPCreator:
             dcpomatic_path: Path to dcpomatic2_cli binary.
                           If None, searches in PATH.
         """
-        if dcpomatic_path:
-            self.bin_path = Path(dcpomatic_path)
-            if not self.bin_path.exists():
-                raise DCPCreationError(f"dcpomatic2_cli not found at {dcpomatic_path}")
-        else:
-            found = shutil.which("dcpomatic2_cli")
-            if not found:
-                raise DCPCreationError(
-                    "dcpomatic2_cli not found in PATH. "
-                    "Install DCP-o-matic or provide explicit path."
-                )
-            self.bin_path = Path(found)
+        self.runner = Runner("dcpomatic2_cli", dcpomatic_path)
 
     def create(
         self,
@@ -47,7 +35,7 @@ class DCPCreator:
         output: Path | None = None,
         encrypt: bool = False,
         progress_callback: Callable[[float], None] | None = None,
-    ) -> DCPResult:
+    ) -> CLIResult:
         """
         Create a DCP from a DCP-o-matic project.
 
@@ -66,7 +54,7 @@ class DCPCreator:
         if not project.exists():
             raise DCPCreationError(f"Project not found: {project}")
 
-        cmd = [str(self.bin_path)]
+        cmd = []
 
         if output:
             output.mkdir(parents=True, exist_ok=True)
@@ -77,34 +65,12 @@ class DCPCreator:
 
         cmd.append(str(project))
 
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-            )
-        except OSError as e:
-            raise DCPCreationError(f"Failed to run dcpomatic2_cli: {e}")
-
-        success = result.returncode == 0
-
-        if not success:
-            raise DCPCreationError(
-                f"DCP creation failed (exit code {result.returncode}):\n{result.stderr}"
-            )
-
-        return DCPResult(
+        return self.runner.run(
+            *cmd,
             output_path=output or project,
-            success=success,
-            stdout=result.stdout,
-            stderr=result.stderr,
+            error_prefix="DCP creation"
         )
 
     def version(self) -> str:
         """Get dcpomatic2_cli version."""
-        result = subprocess.run(
-            [str(self.bin_path), "--version"],
-            capture_output=True,
-            text=True,
-        )
-        return result.stdout.strip()
+        return self.runner.version()
