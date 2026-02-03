@@ -66,9 +66,7 @@ class DCPCreator:
         cmd.append(str(project))
 
         return self.runner.run(
-            *cmd,
-            output_path=output or project,
-            error_prefix="DCP creation"
+            *cmd, output_path=output or project, error_prefix="DCP creation"
         )
 
     def version(self) -> str:

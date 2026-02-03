@@ -27,6 +27,8 @@ class CertificateGenerationError(PyKDMError):
 
     pass
 
+
 class CLIError(Exception):
     """Raised when CLI command fails."""
+
     pass

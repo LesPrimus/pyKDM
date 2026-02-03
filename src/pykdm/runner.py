@@ -9,10 +9,12 @@ from pykdm.exceptions import CLIError
 @dataclass
 class CLIResult:
     """Result of a CLI command execution."""
+
     output_path: Path
     success: bool
     stdout: str
     stderr: str
+
 
 class Runner:
     def __init__(self, binary_name: str, binary_path: str | None = None):
@@ -34,8 +36,9 @@ class Runner:
         except OSError as e:
             raise CLIError(f"{error_prefix} failed: {e}")
 
-    def run(self, *args: str, output_path: Path, error_prefix: str = "Command") -> CLIResult:
-
+    def run(
+        self, *args: str, output_path: Path, error_prefix: str = "Command"
+    ) -> CLIResult:
         result = self.execute(*args, error_prefix=error_prefix)
 
         if result.returncode != 0:
