@@ -220,7 +220,9 @@ class DCPProjectCreator:
                     raise DCPProjectCreationError(f"Content file not found: {item}")
                 cmd.append(str(item))
 
-        return self.runner.run(*cmd, output_path=output, error_prefix="Project creation")
+        return self.runner.run(
+            *cmd, output_path=output, error_prefix="Project creation"
+        )
 
     def create_and_build(
         self,
