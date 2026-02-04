@@ -1,12 +1,11 @@
-import subprocess
-import shutil
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
 from typing import Sequence
 
 from .exceptions import DCPProjectCreationError
-from .dcp import DCPCreator, DCPResult
+from .dcp import DCPCreator
+from .runner import Runner, CLIResult
 
 
 class DCPContentType(Enum):
@@ -113,20 +112,7 @@ class DCPProjectCreator:
             dcpomatic_create_path: Path to dcpomatic2_create binary.
                                   If None, searches in PATH.
         """
-        if dcpomatic_create_path:
-            self.bin_path = Path(dcpomatic_create_path)
-            if not self.bin_path.exists():
-                raise DCPProjectCreationError(
-                    f"dcpomatic2_create not found at {dcpomatic_create_path}"
-                )
-        else:
-            found = shutil.which("dcpomatic2_create")
-            if not found:
-                raise DCPProjectCreationError(
-                    "dcpomatic2_create not found in PATH. "
-                    "Install DCP-o-matic or provide explicit path."
-                )
-            self.bin_path = Path(found)
+        self.runner = Runner("dcpomatic2_create", dcpomatic_create_path)
 
     def create(
         self,
@@ -141,7 +127,7 @@ class DCPProjectCreator:
         dimension: Dimension | None = None,
         no_use_isdcf_name: bool = False,
         no_sign: bool = False,
-    ) -> DCPProjectResult:
+    ) -> CLIResult:
         """
         Create a DCP-o-matic project from video/audio content.
 
@@ -173,12 +159,10 @@ class DCPProjectCreator:
         if not content_list:
             raise DCPProjectCreationError("At least one content file is required")
 
-        # Build command
-        cmd = [str(self.bin_path)]
-
-        # Output directory
         output.mkdir(parents=True, exist_ok=True)
-        cmd.extend(["-o", str(output)])
+
+        # Build command
+        cmd = ["-o", str(output)]
 
         # Optional arguments
         if name:
@@ -236,28 +220,7 @@ class DCPProjectCreator:
                     raise DCPProjectCreationError(f"Content file not found: {item}")
                 cmd.append(str(item))
 
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-            )
-        except OSError as e:
-            raise DCPProjectCreationError(f"Failed to run dcpomatic2_create: {e}")
-
-        success = result.returncode == 0
-
-        if not success:
-            raise DCPProjectCreationError(
-                f"Project creation failed (exit code {result.returncode}):\n{result.stderr}"
-            )
-
-        return DCPProjectResult(
-            output_path=output,
-            success=success,
-            stdout=result.stdout,
-            stderr=result.stderr,
-        )
+        return self.runner.run(*cmd, output_path=output, error_prefix="Project creation")
 
     def create_and_build(
         self,
@@ -274,7 +237,7 @@ class DCPProjectCreator:
         no_use_isdcf_name: bool = False,
         no_sign: bool = False,
         dcpomatic_cli_path: str | None = None,
-    ) -> tuple[DCPProjectResult, DCPResult]:
+    ) -> tuple[CLIResult, CLIResult]:
         """
         Create a DCP-o-matic project and build the DCP in one step.
 
@@ -327,9 +290,4 @@ class DCPProjectCreator:
 
     def version(self) -> str:
         """Get dcpomatic2_create version."""
-        result = subprocess.run(
-            [str(self.bin_path), "--version"],
-            capture_output=True,
-            text=True,
-        )
-        return result.stdout.strip()
+        return self.runner.version()

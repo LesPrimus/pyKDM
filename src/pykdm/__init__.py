@@ -2,7 +2,6 @@ from .dcp import DCPCreator
 from .kdm import KDMGenerator, KDMType
 from .project import (
     DCPProjectCreator,
-    DCPProjectResult,
     DCPContentType,
     ContainerRatio,
     DCPStandard,
@@ -29,7 +28,6 @@ __all__ = [
     "DCPCreationError",
     "KDMGenerationError",
     "DCPProjectCreator",
-    "DCPProjectResult",
     "DCPContentType",
     "ContainerRatio",
     "DCPStandard",
